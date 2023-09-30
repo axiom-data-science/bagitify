@@ -1,4 +1,5 @@
 import bagit
+import json
 import requests
 import os
 import datetime
@@ -53,4 +54,7 @@ def gen_nc_filename(erddap_url, start_datetime):
     
 def get_metadata(erddap_url):
     metadata_url = erddap_url.replace("/tabledap/","/info/").replace(".html","/index.json")
-    
+    r = requests.get(metadata_url, allow_redirects=True)
+    metadata = json.loads(r.content.decode("utf-8"))
+    return metadata
+
