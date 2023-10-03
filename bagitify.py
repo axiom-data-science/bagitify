@@ -3,6 +3,7 @@ import json
 import requests
 import os
 import datetime
+import re
 
 
 dt_format = "%Y-%m-%dT%H:%M:%SZ"
@@ -108,8 +109,34 @@ def prep_bagit_metadata(erddap_url, config_metadata):
 
 def gen_archive(bag_directory, bagit_metadata):
     bag = bagit.make_bag(bag_directory, bagit_metadata)
-    
+
     bag.save(manifests=True)
-    #should determine if this is needed here.
+    # should determine if this is needed here.
+
+
+def config_metadata_from_env():
+    config_items = ["Bag-Group-Identifier", "Contact-Email", "Contact-Name",
+                    "Contact-Phone", "Organization-address", "Source-Organization"]
+
+
+    listish = "^\[(\s*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,\s*)*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,?\s*\]$"
+    # Horrifying regex that matches lists of strings or numbers.
+
+    config_metadata = {}
     
-    
+    for item in config_items:
+        var_name = "BAGIT_" + item.upper().replace("-","_")
+        from_env = os.environ.get(var_name,  default=None)
+        if from_env is None:
+            print (f'Warning: {var_name} not set! Defaulting to empty string.')
+            from_env = ""
+            # If we want to exit instead, or perform more validation, change this.
+        
+        match = re.search(listish, from_env)
+        if not match is None:
+            from_env = json.loads(from_env)
+            # Support simple lists of values. Treat everythign else as a single value.
+        
+        config_metadata[item] = from_env
+        
+    return config_metadata
