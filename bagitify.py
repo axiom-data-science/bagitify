@@ -1,3 +1,4 @@
+import argparse
 import bagit
 import json
 import requests
@@ -121,6 +122,16 @@ def config_metadata_from_env():
 
     listish = "^\[(\s*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,\s*)*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,?\s*\]$"
     # Horrifying regex that matches lists of strings or numbers.
+    # To elaborate: Matches anythign that starts with '[', ends with ']',
+    # and in between features at least one number or string, 
+    # sepperated by commas and optional whitespace, optionally with a trailing comma.
+    # Strings are delimited by either " or ' but not a mixture of them, 
+    # and may not contain whatever delimits them unless it is escaped.
+    # Numbers can be negative, can be integers or doubles, 
+    # and in the later case are allowed to ommit the bit before the decimal for forms like ".241"
+    # scientific notation, for example, is not supported.
+    # This should, I think, be good enough for any case we are going to encounter here.
+    # Even just strings would probably be fine, but future proofing took me all of 5 minutes extra.
 
     config_metadata = {}
     
@@ -140,3 +151,32 @@ def config_metadata_from_env():
         config_metadata[item] = from_env
         
     return config_metadata
+
+
+def main():
+    global_parser = argparse.ArgumentParser()
+    # subparsers = global_parser.add_subparsers(dest="command", required=True)
+
+    # dehydrate_parser = subparsers.add_parser(
+    #     "dehydrate", help="extract information from a netcdf file for future generation and save it to a file.")
+    # dehydrate_parser.set_defaults(func=do_dehydrate)
+    # dehydrate_parser.add_argument(
+    #     "netcdf_file", help="the netcdf file to dehydrate")
+    # dehydrate_parser.add_argument("output_file", nargs="?", default=None,
+    #                               help="file path for dehydrated output. If none is specified, one will be generated automatically from the source filename.")
+    # # dehydrate_parser.add_argument("-c", "--create_config", action="store_true", help="also generate a boilerplate config for rehydration, which can be modified as needed.")
+
+    # rehydrate_parser = subparsers.add_parser(
+    #     "rehydrate", help="generate a new netcdf file from a config.")
+    # rehydrate_parser.set_defaults(func=do_rehydrate)
+    # rehydrate_parser.add_argument(
+    #     "config", help="config file path, or configuration in json format.")
+    # rehydrate_parser.add_argument("output_file", nargs="?", default=None,
+    #                               help="file path for generated output. If none is specified, one will be generated automatically from the source filename.")
+
+    # args = global_parser.parse_args()
+    # args.func(args)
+
+
+if __name__ == "__main__":
+    main()
