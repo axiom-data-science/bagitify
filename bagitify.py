@@ -28,8 +28,12 @@ def round_to_last_month(start_datetime):
 
 
 def round_to_next_month(end_datetime):
-    next_month_start = datetime.datetime(
-        day=1, month=end_datetime.month + 1, year=end_datetime.year)
+    if end_datetime.month < 12:
+        next_month_start = datetime.datetime(
+            day=1, month=end_datetime.month + 1, year=end_datetime.year)
+    else:
+        next_month_start = datetime.datetime(
+            day=1, month=1, year=end_datetime.year + 1)
     return next_month_start
 
 
@@ -41,22 +45,29 @@ def parse_datetime(dt_str):
     return datetime.datetime.strptime(dt_str, dt_format)
 
 
-def get_month_netcdf(erddap_url, start_datetime, bag_directory):
+def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
     end_datetime = round_to_next_month(start_datetime)
+
     month_nc_url = erddap_url.replace(".html", ".ncCFMA?&time>=") + format_datetime(
         start_datetime) + "&time<" + format_datetime(end_datetime)
-    r = requests.get(month_nc_url, allow_redirects=True)
     nc_filename = gen_nc_filename(erddap_url, start_datetime)
     nc_path = os.path.join(bag_directory, "data", nc_filename)
+    if verbose:
+        print(
+            f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
+    r = requests.get(month_nc_url, allow_redirects=True)
     with open(nc_path, "wb") as fp:
         fp.write(r.content)
+    if verbose:
+        print("Done.")
 
 
-def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory):
+def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory, verbose=True):
     current_start = start_datetime
     current_end = round_to_next_month(current_start)
     while current_end <= end_datetime:
-        get_month_netcdf(erddap_url, current_start, bag_directory)
+        get_month_netcdf(erddap_url, current_start,
+                         bag_directory, verbose=verbose)
         current_start = current_end
         current_end = round_to_next_month(current_end)
 
@@ -109,8 +120,7 @@ def parse_erddap_metadata(erdapp_metadata):
 def prep_bagit_metadata(erddap_url, config_metadata):
     erddap_metadat = parse_erddap_metadata(get_metadata(erddap_url))
     bagit_metadata = config_metadata
-    bagit_metadata["External-Description"] = "Sensor data from station " + \
-        erddap_url.split("/")[-1].split(".")[0:-1]
+    bagit_metadata["External-Description"] = f'Sensor data from station {erddap_url.split("/")[-1].split(".")[0:-1]}'
     title = erddap_metadat["attribute"]["NC_GLOBAL"]["title"]["data_value"]
     bagit_metadata["External-Identifier"] = title
 

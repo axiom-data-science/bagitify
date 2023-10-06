@@ -3,7 +3,4 @@ channels:
  - conda-forge
 dependencies:
  - bagit=1.8.1
- - pip=23.2.1
  - requests=2.31.0
- - pip:
-    - b2sdk==1.24.0
