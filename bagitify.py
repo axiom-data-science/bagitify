@@ -183,7 +183,7 @@ def main():
         end_datetime = parse_datetime(args.end)
 
     if args.directory is None:
-        bag_directory = os.path.join(os.getcwd(), gen_bag_dirname(
+        bag_directory = os.path.join(os.getcwd(), "bagit_archives", gen_bag_dirname(
             erddap_url, start_datetime, end_datetime))
     else:
         bag_directory = args.directory
