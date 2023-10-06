@@ -51,7 +51,7 @@ def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
     month_nc_url = erddap_url.replace(".html", ".ncCFMA?&time>=") + format_datetime(
         start_datetime) + "&time<" + format_datetime(end_datetime)
     nc_filename = gen_nc_filename(erddap_url, start_datetime)
-    nc_path = os.path.join(bag_directory, "data", nc_filename)
+    nc_path = os.path.join(bag_directory, nc_filename)
     if verbose:
         print(
             f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
@@ -120,7 +120,7 @@ def parse_erddap_metadata(erdapp_metadata):
 def prep_bagit_metadata(erddap_url, config_metadata):
     erddap_metadat = parse_erddap_metadata(get_metadata(erddap_url))
     bagit_metadata = config_metadata
-    bagit_metadata["External-Description"] = f'Sensor data from station {erddap_url.split("/")[-1].split(".")[0:-1]}'
+    bagit_metadata["External-Description"] = f'Sensor data from station {"".join(erddap_url.split("/")[-1].split(".")[0:-1])}'
     title = erddap_metadat["attribute"]["NC_GLOBAL"]["title"]["data_value"]
     bagit_metadata["External-Identifier"] = title
 
@@ -190,7 +190,8 @@ def main():
 
     try:
         os.mkdir(bag_directory)
-        os.mkdir(os.path.join(bag_directory, "data"))
+        #os.mkdir(os.path.join(bag_directory, "data"))
+        # Turns out that creating this manually results in nested data directories in the end, which is a bit silly.
     except OSError as error:
         print(error)
 
