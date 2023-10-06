@@ -139,33 +139,22 @@ def config_metadata_from_env():
     config_items = ["Bag-Group-Identifier", "Contact-Email", "Contact-Name",
                     "Contact-Phone", "Organization-address", "Source-Organization"]
 
-    listish = "^\[(\s*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,\s*)*(\"([^(\")]|\\\")*\"|'([^(\')]|\\\')*'|-?(\d*\.)?\d+)\s*,?\s*\]$"
-    # Horrifying regex that matches lists of strings or numbers.
-    # To elaborate: Matches anythign that starts with '[', ends with ']',
-    # and in between features at least one number or string,
-    # sepperated by commas and optional whitespace, optionally with a trailing comma.
-    # Strings are delimited by either " or ' but not a mixture of them,
-    # and may not contain whatever delimits them unless it is escaped.
-    # Numbers can be negative, can be integers or doubles,
-    # and in the later case are allowed to ommit the bit before the decimal for forms like ".241"
-    # scientific notation, for example, is not supported.
-    # This should, I think, be good enough for any case we are going to encounter here.
-    # Even just strings would probably be fine, but future proofing took me all of 5 minutes extra.
-
     config_metadata = {}
+    env_keys = list(dict(os.environ).keys())
 
     for item in config_items:
         var_name = "BAGIT_" + item.upper().replace("-", "_")
-        from_env = os.environ.get(var_name,  default=None)
-        if from_env is None:
+        r = re.compile(f'^{var_name}')
+        
+        vars_from_env = list(filter(r.match, env_keys))
+        if len(vars_from_env) < 1:
             print(f'Warning: {var_name} not set! Defaulting to empty string.')
             from_env = ""
             # If we want to exit instead, or perform more validation, change this.
-
-        match = re.search(listish, from_env)
-        if not match is None:
-            from_env = json.loads(from_env)
-            # Support simple lists of values. Treat everythign else as a single value.
+        elif len(vars_from_env) == 1:
+            from_env = os.environ.get(vars_from_env[0])
+        else:
+            from_env = [os.environ.get(v) for v in vars_from_env]
 
         config_metadata[item] = from_env
 
