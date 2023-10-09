@@ -1,0 +1,13 @@
+stages:
+  - build
+
+build_push_clean:
+  stage: build
+  only:
+    - main
+  script:
+    - docker build -t ${CI_PROJECT_NAME}:${CI_PIPELINE_ID} .
+    - docker tag ${CI_PROJECT_NAME}:${CI_PIPELINE_ID} registry.axiom/${CI_PROJECT_NAME}:latest
+    - docker push registry.axiom/${CI_PROJECT_NAME}:latest
+    - docker rmi --no-prune ${CI_PROJECT_NAME}:${CI_PIPELINE_ID}
+    - docker rmi --no-prune registry.axiom/${CI_PROJECT_NAME}:latest
