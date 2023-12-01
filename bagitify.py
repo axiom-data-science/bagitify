@@ -2,19 +2,19 @@
 
 import argparse
 import bagit
-import json
-import requests
-import os
 import datetime
+import json
+import os
+import pathlib
 import re
+import requests
 
 
 dt_format = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def get_start_end(erddap_url):
-    start_end_url = erddap_url.replace(
-        ".html", ".csv0?time&orderByMinMax(%22time%22)")
+    start_end_url = f'{erddap_url}.csv0?time&orderByMinMax(%22time%22)'
     r = requests.get(start_end_url, allow_redirects=True)
     processed = [parse_datetime(dt_str) for dt_str in r.content.decode(
         "utf-8").strip().split("\n")]
@@ -50,8 +50,12 @@ def parse_datetime(dt_str):
 def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
     end_datetime = round_to_next_month(start_datetime)
 
-    month_nc_url = erddap_url.replace(".html", ".ncCFMA?&time>=") + format_datetime(
-        start_datetime) + "&time<" + format_datetime(end_datetime)
+    month_nc_url = (
+        f"{erddap_url}.ncCFMA?&time>="
+        + format_datetime(start_datetime)
+        + "&time<"
+        + format_datetime(end_datetime)
+    )
     nc_filename = gen_nc_filename(erddap_url, start_datetime)
     nc_path = os.path.join(bag_directory, nc_filename)
     if verbose:
@@ -76,24 +80,18 @@ def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory, ve
 
 
 def gen_nc_filename(erddap_url, start_datetime):
-    name_parts = erddap_url.split("/")[-1].split("_")[0:-1]
+    name_parts = [get_erddap_dataset_name_from_url(erddap_url)]
     name_parts.append(start_datetime.strftime("%Y-%m") + ".nc")
     name = "_".join(name_parts)
     return name
 
 
-def gen_bag_dirname(erddap_url, start_datetime, end_datetime):
-    name_parts = erddap_url.split("/")[-1].split("_")[0:-1]
-    name_parts.append(start_datetime.strftime("%Y-%m"))
-    name_parts.append(end_datetime.strftime("%Y-%m"))
-    name_parts.append("bagit")
-    name = "_".join(name_parts)
-    return name
+def get_erddap_dataset_name_from_url(erddap_url):
+    return erddap_url.split("/")[-1]
 
 
 def get_metadata(erddap_url):
-    metadata_url = erddap_url.replace(
-        "/tabledap/", "/info/").replace(".html", "/index.json")
+    metadata_url = erddap_url.replace("/tabledap/", "/info/") + "/index.json"
     r = requests.get(metadata_url, allow_redirects=True)
     metadata = json.loads(r.content.decode("utf-8"))
     return metadata
@@ -173,9 +171,11 @@ def main():
     parser.add_argument("-e", "--end", help="end timestamp")
 
     args = parser.parse_args()
-    # args.func(args)
 
-    erddap_url = args.ERDDAP_url
+    erddap_url = args.ERDDAP_url.lower()
+    #remove .html suffix if pre
+    if erddap_url.endswith(".html"):
+        erddap_url = erddap_url.removesuffix(".html")
 
     
     start_datetime, end_datetime = get_start_end(erddap_url)
@@ -189,17 +189,12 @@ def main():
 
 
     if args.directory is None:
-        bag_directory = os.path.join(os.getcwd(), "bagit_archives", gen_bag_dirname(
-            erddap_url, start_datetime, end_datetime))
+        bag_directory = os.path.join(os.getcwd(), "bagit_archives",
+            get_erddap_dataset_name_from_url(erddap_url))
     else:
         bag_directory = args.directory
 
-    try:
-        os.mkdir(bag_directory)
-        #os.mkdir(os.path.join(bag_directory, "data"))
-        # Turns out that creating this manually results in nested data directories in the end, which is a bit silly.
-    except OSError as error:
-        print(error)
+    pathlib.Path(bag_directory).mkdir(parents=True, exist_ok=True)
 
     get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory)
 
