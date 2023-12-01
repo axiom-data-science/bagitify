@@ -58,6 +58,7 @@ def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
         print(
             f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
     r = requests.get(month_nc_url, allow_redirects=True)
+    r.raise_for_status()
     with open(nc_path, "wb") as fp:
         fp.write(r.content)
     if verbose:
@@ -176,13 +177,16 @@ def main():
 
     erddap_url = args.ERDDAP_url
 
-    if args.start is None or args.end is None:
-        start_datetime, end_datetime = get_start_end(erddap_url)
+    
+    start_datetime, end_datetime = get_start_end(erddap_url)
 
     if not args.start is None:
-        start_datetime = parse_datetime(args.start)
+        parsed_start_datetime = parse_datetime(args.start)
+        start_datetime = parsed_start_datetime if parsed_start_datetime >= start_datetime else start_datetime
     if not args.end is None:
-        end_datetime = parse_datetime(args.end)
+        parsed_end_datetime = parse_datetime(args.end)
+        end_datetime = parsed_end_datetime if parsed_end_datetime <= end_datetime else end_datetime
+
 
     if args.directory is None:
         bag_directory = os.path.join(os.getcwd(), "bagit_archives", gen_bag_dirname(
