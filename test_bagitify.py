@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 import os
 import shutil
@@ -6,6 +7,41 @@ import bagitify
 
 testing_netcdfs = "test-data/netcdfs"
 testing_metadata = "test-data/metadata.json"
+
+
+def test_get_start_dates_for_date_range():
+    assert bagitify.get_start_dates_for_date_range(
+        start_datetime=datetime(2023, 3, 22),
+        end_datetime=datetime(2023, 6, 19),
+    ) == [
+        datetime(2023, 3, 1),
+        datetime(2023, 4, 1),
+        datetime(2023, 5, 1),
+        datetime(2023, 6, 1),
+    ]
+
+    assert bagitify.get_start_dates_for_date_range(
+        start_datetime=datetime(2023, 11, 1),
+        end_datetime=datetime(2024, 4, 1),
+    ) == [
+        datetime(2023, 11, 1),
+        datetime(2023, 12, 1),
+        datetime(2024, 1, 1),
+        datetime(2024, 2, 1),
+        datetime(2024, 3, 1),
+    ]
+
+    assert bagitify.get_start_dates_for_date_range(
+        start_datetime=datetime(2023, 11, 1),
+        end_datetime=datetime(2024, 4, 2),
+    ) == [
+        datetime(2023, 11, 1),
+        datetime(2023, 12, 1),
+        datetime(2024, 1, 1),
+        datetime(2024, 2, 1),
+        datetime(2024, 3, 1),
+        datetime(2024, 4, 1),
+    ]
 
 
 def test_archive_creation(tmp_path):

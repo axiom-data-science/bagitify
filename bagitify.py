@@ -23,7 +23,7 @@ def get_start_end(erddap_url):
     return (start, end)
 
 
-def round_to_last_month(start_datetime):
+def round_to_start_of_month(start_datetime):
     month_start = datetime.datetime(
         day=1, month=start_datetime.month, year=start_datetime.year)
     return month_start
@@ -62,21 +62,36 @@ def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
         print(
             f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
     r = requests.get(month_nc_url, allow_redirects=True)
-    r.raise_for_status()
+    # dataset may contain data gaps one month or greater between start and end times
+    if r.status_code == 404 and 'Your query produced no matching results' in str(r.content):
+        print(f'No data found for month {format_datetime(start_datetime)}.')
+        return
+    else:
+        r.raise_for_status()
+
     with open(nc_path, "wb") as fp:
         fp.write(r.content)
     if verbose:
         print("Done.")
 
 
-def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory, verbose=True):
-    current_start = start_datetime
+def get_start_dates_for_date_range(start_datetime, end_datetime):
+    month_start_dates = []
+    current_start = round_to_start_of_month(start_datetime)
+    if end_datetime != round_to_start_of_month(end_datetime):
+        end_datetime = round_to_next_month(end_datetime)
     current_end = round_to_next_month(current_start)
+
     while current_end <= end_datetime:
-        get_month_netcdf(erddap_url, current_start,
-                         bag_directory, verbose=verbose)
+        month_start_dates.append(current_start)
         current_start = current_end
         current_end = round_to_next_month(current_end)
+    return month_start_dates
+
+
+def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory, verbose=True):
+    for month_start_datetime in get_start_dates_for_date_range(start_datetime, end_datetime):
+        get_month_netcdf(erddap_url, month_start_datetime, bag_directory, verbose=verbose)
 
 
 def gen_nc_filename(erddap_url, start_datetime):
@@ -179,6 +194,7 @@ def main():
 
     
     start_datetime, end_datetime = get_start_end(erddap_url)
+    print(f'Dataset has time range {format_datetime(start_datetime)} - {format_datetime(end_datetime)}')
 
     if not args.start is None:
         parsed_start_datetime = parse_datetime(args.start)
