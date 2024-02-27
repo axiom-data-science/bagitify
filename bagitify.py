@@ -122,10 +122,10 @@ def parse_erddap_metadata(erdapp_metadata):
         data_type = row[3]
         data_value = row[4]
 
-        if not row_type in nested:
+        if row_type not in nested:
             nested[row_type] = {}
 
-        if not var_name in nested[row_type]:
+        if var_name not in nested[row_type]:
             nested[row_type][var_name] = {}
 
         nested[row_type][var_name][att_name] = {
@@ -136,7 +136,9 @@ def parse_erddap_metadata(erdapp_metadata):
 def prep_bagit_metadata(erddap_url, config_metadata):
     erddap_metadat = parse_erddap_metadata(get_metadata(erddap_url))
     bagit_metadata = config_metadata
-    bagit_metadata["External-Description"] = f'Sensor data from station {"".join(erddap_url.split("/")[-1].split(".")[0:-1])}'
+    bagit_metadata["External-Description"] = (
+      f'Sensor data from station {"".join(erddap_url.split("/")[-1].split(".")[0:-1])}'
+    )
     title = erddap_metadat["attribute"]["NC_GLOBAL"]["title"]["data_value"]
     bagit_metadata["External-Identifier"] = title
 
@@ -161,7 +163,7 @@ def config_metadata_from_env():
     for item in config_items:
         var_name = "BAGIT_" + item.upper().replace("-", "_")
         r = re.compile(f'^{var_name}')
-        
+
         vars_from_env = list(filter(r.match, env_keys))
         if len(vars_from_env) < 1:
             print(f'Warning: {var_name} not set! Defaulting to empty string.')
@@ -188,25 +190,23 @@ def main():
     args = parser.parse_args()
 
     erddap_url = args.ERDDAP_url.lower()
-    #remove .html suffix if pre
+    # remove .html suffix if pre
     if erddap_url.endswith(".html"):
         erddap_url = erddap_url.removesuffix(".html")
 
-    
     start_datetime, end_datetime = get_start_end(erddap_url)
     print(f'Dataset has time range {format_datetime(start_datetime)} - {format_datetime(end_datetime)}')
 
-    if not args.start is None:
+    if args.start is not None:
         parsed_start_datetime = parse_datetime(args.start)
         start_datetime = parsed_start_datetime if parsed_start_datetime >= start_datetime else start_datetime
-    if not args.end is None:
+    if args.end is not None:
         parsed_end_datetime = parse_datetime(args.end)
         end_datetime = parsed_end_datetime if parsed_end_datetime <= end_datetime else end_datetime
 
-
     if args.directory is None:
         bag_directory = os.path.join(os.getcwd(), "bagit_archives",
-            get_erddap_dataset_name_from_url(erddap_url))
+                                     get_erddap_dataset_name_from_url(erddap_url))
     else:
         bag_directory = args.directory
 

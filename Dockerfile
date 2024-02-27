@@ -6,7 +6,7 @@ RUN micromamba install -y -n base -f /tmp/environment.yml && \
 
 WORKDIR /srv/bagitify
 
-COPY . .
+COPY ./bagitify.py .
 
 ENV PYTHONUNBUFFERED=1
 

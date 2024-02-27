@@ -5,3 +5,4 @@ dependencies:
  - bagit=1.8.1
  - pytest=7.4.2
  - requests=2.31.0
+ - flake8

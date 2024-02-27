@@ -1,0 +1,14 @@
+services:
+  bagitify:
+    build: .
+    user: "${BAGITIFY_USER:-mambauser}"
+    environment:
+      BAGIT_BAG_GROUP_IDENTIFIER: bgi
+      BAGIT_CONTACT_EMAIL: fake@email.address
+      BAGIT_CONTACT_NAME: John Doe
+      BAGIT_CONTACT_PHONE: (123) 456-7890
+      BAGIT_ORGANIZATION_ADDRESS: 123 Fake Street, Some Town, AK 12345
+      BAGIT_SOURCE_ORGANIZATION: Fake Org
+    volumes:
+      - ./ncei-archives:/srv/bagitify/bagit_archives
+    command: -s 2022-05-01T00:00:00Z -e 2022-08-01T00:00:00Z https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html

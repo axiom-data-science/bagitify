@@ -1,3 +1,4 @@
-bagit_archives/*
+bagit_archives
+ncei-archives
 *.pyc
 .envrc
