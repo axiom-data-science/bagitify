@@ -10,4 +10,4 @@ COPY ./bagitify.py .
 
 ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "./bagitify.py"]
+ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "./bagitify/bagitify.py"]

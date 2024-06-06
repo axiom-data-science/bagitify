@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 
-import argparse
 import bagit
+import click
 import datetime
 import json
 import os
-import pathlib
 import re
 import requests
 
+from pathlib import Path
 
 dt_format = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def get_start_end(erddap_url):
-    start_end_url = f'{erddap_url}.csv0?time&orderByMinMax(%22time%22)'
+def get_start_end(tabledap_url: str) -> (datetime, datetime):
+    start_end_url = f'{tabledap_url}.csv0?time&orderByMinMax(%22time%22)'
     r = requests.get(start_end_url, allow_redirects=True)
     processed = [parse_datetime(dt_str) for dt_str in r.content.decode(
         "utf-8").strip().split("\n")]
@@ -23,13 +23,13 @@ def get_start_end(erddap_url):
     return (start, end)
 
 
-def round_to_start_of_month(start_datetime):
+def round_to_start_of_month(start_datetime: datetime) -> datetime:
     month_start = datetime.datetime(
         day=1, month=start_datetime.month, year=start_datetime.year)
     return month_start
 
 
-def round_to_next_month(end_datetime):
+def round_to_next_month(end_datetime: datetime) -> datetime:
     if end_datetime.month < 12:
         next_month_start = datetime.datetime(
             day=1, month=end_datetime.month + 1, year=end_datetime.year)
@@ -39,24 +39,24 @@ def round_to_next_month(end_datetime):
     return next_month_start
 
 
-def format_datetime(datetime):
+def format_datetime(datetime: datetime) -> str:
     return datetime.strftime(dt_format)
 
 
-def parse_datetime(dt_str):
+def parse_datetime(dt_str: str) -> datetime:
     return datetime.datetime.strptime(dt_str, dt_format)
 
 
-def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
+def get_month_netcdf(tabledap_url: str, start_datetime: datetime, bag_directory: Path, verbose: bool = True):
     end_datetime = round_to_next_month(start_datetime)
 
     month_nc_url = (
-        f"{erddap_url}.ncCFMA?&time>="
+        f"{tabledap_url}.ncCFMA?&time>="
         + format_datetime(start_datetime)
         + "&time<"
         + format_datetime(end_datetime)
     )
-    nc_filename = gen_nc_filename(erddap_url, start_datetime)
+    nc_filename = gen_nc_filename(tabledap_url, start_datetime)
     nc_path = os.path.join(bag_directory, nc_filename)
     if verbose:
         print(
@@ -71,11 +71,9 @@ def get_month_netcdf(erddap_url, start_datetime, bag_directory, verbose=True):
 
     with open(nc_path, "wb") as fp:
         fp.write(r.content)
-    if verbose:
-        print("Done.")
 
 
-def get_start_dates_for_date_range(start_datetime, end_datetime):
+def get_start_dates_for_date_range(start_datetime: datetime, end_datetime: datetime) -> list[datetime]:
     month_start_dates = []
     current_start = round_to_start_of_month(start_datetime)
     if end_datetime != round_to_start_of_month(end_datetime):
@@ -89,31 +87,31 @@ def get_start_dates_for_date_range(start_datetime, end_datetime):
     return month_start_dates
 
 
-def get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory, verbose=True):
+def get_range_netcdf(tabledap_url: str, start_datetime: datetime, end_datetime: datetime, bag_directory: Path, verbose: bool = True):
     for month_start_datetime in get_start_dates_for_date_range(start_datetime, end_datetime):
-        get_month_netcdf(erddap_url, month_start_datetime, bag_directory, verbose=verbose)
+        get_month_netcdf(tabledap_url, month_start_datetime, bag_directory, verbose=verbose)
 
 
-def gen_nc_filename(erddap_url, start_datetime):
-    name_parts = [get_erddap_dataset_name_from_url(erddap_url)]
+def gen_nc_filename(tabledap_url: str, start_datetime: datetime) -> str:
+    name_parts = [get_dataset_name_from_tabledap_url(tabledap_url)]
     name_parts.append(start_datetime.strftime("%Y-%m") + ".nc")
     name = "_".join(name_parts)
     return name
 
 
-def get_erddap_dataset_name_from_url(erddap_url):
-    return erddap_url.split("/")[-1]
+def get_dataset_name_from_tabledap_url(tabledap_url: str) -> str:
+    return tabledap_url.split("/")[-1]
 
 
-def get_metadata(erddap_url):
-    metadata_url = erddap_url.replace("/tabledap/", "/info/") + "/index.json"
+def get_metadata(tabledap_url: str) -> dict:
+    metadata_url = tabledap_url.replace("/tabledap/", "/info/") + "/index.json"
     r = requests.get(metadata_url, allow_redirects=True)
     metadata = json.loads(r.content.decode("utf-8"))
     return metadata
 
 
-def parse_erddap_metadata(erdapp_metadata):
-    rows = erdapp_metadata["table"]["rows"]
+def parse_tabledap_metadata(tabledap_metadata: dict) -> dict:
+    rows = tabledap_metadata["table"]["rows"]
     nested = {}
     for row in rows:
         row_type = row[0]
@@ -133,19 +131,19 @@ def parse_erddap_metadata(erdapp_metadata):
     return nested
 
 
-def prep_bagit_metadata(erddap_url, config_metadata):
-    erddap_metadat = parse_erddap_metadata(get_metadata(erddap_url))
+def prep_bagit_metadata(tabledap_url: str, config_metadata: dict) -> dict:
+    tabledap_metadata = parse_tabledap_metadata(get_metadata(tabledap_url))
     bagit_metadata = config_metadata
     bagit_metadata["External-Description"] = (
-      f'Sensor data from station {"".join(erddap_url.split("/")[-1].split(".")[0:-1])}'
+      f'Sensor data from station {"".join(tabledap_url.split("/")[-1].split(".")[0:-1])}'
     )
-    title = erddap_metadat["attribute"]["NC_GLOBAL"]["title"]["data_value"]
+    title = tabledap_metadata["attribute"]["NC_GLOBAL"]["title"]["data_value"]
     bagit_metadata["External-Identifier"] = title
 
     return bagit_metadata
 
 
-def gen_archive(bag_directory, bagit_metadata):
+def gen_archive(bag_directory: Path, bagit_metadata: dict):
     bag = bagit.make_bag(
         bag_directory, bag_info=bagit_metadata, checksums=["sha256"])
 
@@ -153,7 +151,7 @@ def gen_archive(bag_directory, bagit_metadata):
     # should determine if this is needed here.
 
 
-def config_metadata_from_env():
+def config_metadata_from_env() -> dict:
     config_items = ["Bag-Group-Identifier", "Contact-Email", "Contact-Name",
                     "Contact-Phone", "Organization-address", "Source-Organization"]
 
@@ -179,45 +177,48 @@ def config_metadata_from_env():
     return config_metadata
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("ERDDAP_url", help="ERDDAP tabledap url to archive")
-    parser.add_argument("-d", "--directory",
-                        help="bag directory to use for archiving")
-    parser.add_argument("-s", "--start", help="start timestamp")
-    parser.add_argument("-e", "--end", help="end timestamp")
+def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: datetime, requested_end_datetime: datetime):
+    # clean up tabledap url
+    tabledap_url = tabledap_url.lower()
+    # remove .html suffix if present
+    if tabledap_url.endswith(".html"):
+        tabledap_url = tabledap_url.removesuffix(".html")
 
-    args = parser.parse_args()
+    # determine actual range of data available in the target tabledap dataset
+    data_start_datetime, data_end_datetime = get_start_end(tabledap_url)
+    print(f'Dataset has time range {format_datetime(data_start_datetime)} - {format_datetime(data_end_datetime)}')
 
-    erddap_url = args.ERDDAP_url.lower()
-    # remove .html suffix if pre
-    if erddap_url.endswith(".html"):
-        erddap_url = erddap_url.removesuffix(".html")
+    # adjust start and end time if sane arguments were provided
+    bag_start_datetime = max((d for d in [requested_start_datetime, data_start_datetime] if d), default=None)
+    bag_end_datetime = min((d for d in [requested_end_datetime, data_end_datetime] if d), default=None)
 
-    start_datetime, end_datetime = get_start_end(erddap_url)
-    print(f'Dataset has time range {format_datetime(start_datetime)} - {format_datetime(end_datetime)}')
+    # use default bag directory based on dataset name if not provided
+    if not bag_directory:
+        bag_directory = Path.cwd() / "bagit_archives" / get_dataset_name_from_tabledap_url(tabledap_url)
 
-    if args.start is not None:
-        parsed_start_datetime = parse_datetime(args.start)
-        start_datetime = parsed_start_datetime if parsed_start_datetime >= start_datetime else start_datetime
-    if args.end is not None:
-        parsed_end_datetime = parse_datetime(args.end)
-        end_datetime = parsed_end_datetime if parsed_end_datetime <= end_datetime else end_datetime
+    bag_directory.mkdir(parents=True, exist_ok=True)
 
-    if args.directory is None:
-        bag_directory = os.path.join(os.getcwd(), "bagit_archives",
-                                     get_erddap_dataset_name_from_url(erddap_url))
-    else:
-        bag_directory = args.directory
-
-    pathlib.Path(bag_directory).mkdir(parents=True, exist_ok=True)
-
-    get_range_netcdf(erddap_url, start_datetime, end_datetime, bag_directory)
+    get_range_netcdf(tabledap_url, bag_start_datetime, bag_end_datetime, bag_directory)
 
     config_metadata = config_metadata_from_env()
-    bagit_metadata = prep_bagit_metadata(erddap_url, config_metadata)
+    bagit_metadata = prep_bagit_metadata(tabledap_url, config_metadata)
     gen_archive(bag_directory, bagit_metadata)
 
 
+@click.command()
+@click.option('-d', '--bag-directory', type=click.Path(writable=True, file_okay=False, path_type=Path))
+@click.option('-s', '--start-date', type=click.DateTime(), default=None)
+@click.option('-e', '--end-date', type=click.DateTime(), default=None)
+@click.argument('tabledap_url')
+def cli(
+  bag_directory: Path,
+  start_date: datetime,
+  end_date: datetime,
+  tabledap_url: str,
+):
+    """Generate NCEI bagit archives from an ERDDAP tabledap dataset at TABLEDAP_URL."""
+    run(tabledap_url, bag_directory, start_date, end_date)
+
+
 if __name__ == "__main__":
-    main()
+    cli()

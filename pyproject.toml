@@ -1,0 +1,20 @@
+[project]
+name = "bagitify"
+dynamic = ["version"]
+dependencies = [
+  "bagit",
+  "requests",
+  "click"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "flake8",
+]
+
+[tool.setuptools_scm]
+
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
