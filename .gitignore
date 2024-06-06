@@ -2,3 +2,4 @@ bagit_archives
 ncei-archives
 *.pyc
 .envrc
+*.egg-info

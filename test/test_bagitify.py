@@ -3,10 +3,11 @@ import json
 import os
 import shutil
 
-import bagitify
+from bagitify import bagitify
 
-testing_netcdfs = "test-data/netcdfs"
-testing_metadata = "test-data/metadata.json"
+test_data_dir = os.path.join(os.path.dirname(__file__), "test-data")
+testing_netcdf = os.path.join(test_data_dir, "netcdf")
+testing_metadata = os.path.join(test_data_dir, "metadata.json")
 
 
 def test_get_start_dates_for_date_range():
@@ -46,7 +47,7 @@ def test_get_start_dates_for_date_range():
 
 def test_archive_creation(tmp_path):
     tmp_bag_dir = os.path.join(tmp_path, "bagdir")
-    shutil.copytree(testing_netcdfs, tmp_bag_dir, symlinks=False, ignore=None, copy_function=shutil.copy2,
+    shutil.copytree(testing_netcdf, tmp_bag_dir, symlinks=False, ignore=None, copy_function=shutil.copy2,
                     ignore_dangling_symlinks=False, dirs_exist_ok=False)
     with open(testing_metadata, "r") as fp:
         bagit_metadata = json.load(fp)
