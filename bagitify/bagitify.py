@@ -177,7 +177,7 @@ def config_metadata_from_env() -> dict:
     return config_metadata
 
 
-def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: datetime, requested_end_datetime: datetime):
+def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: datetime = None, requested_end_datetime: datetime = None):
     # clean up tabledap url
     tabledap_url = tabledap_url.lower()
     # remove .html suffix if present
