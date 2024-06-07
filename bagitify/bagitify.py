@@ -16,6 +16,7 @@ dt_format = "%Y-%m-%dT%H:%M:%SZ"
 def get_start_end(tabledap_url: str) -> (datetime, datetime):
     start_end_url = f'{tabledap_url}.csv0?time&orderByMinMax(%22time%22)'
     r = requests.get(start_end_url, allow_redirects=True)
+    r.raise_for_status()
     processed = [parse_datetime(dt_str) for dt_str in r.content.decode(
         "utf-8").strip().split("\n")]
     start = processed[0]
@@ -106,6 +107,7 @@ def get_dataset_name_from_tabledap_url(tabledap_url: str) -> str:
 def get_metadata(tabledap_url: str) -> dict:
     metadata_url = tabledap_url.replace("/tabledap/", "/info/") + "/index.json"
     r = requests.get(metadata_url, allow_redirects=True)
+    r.raise_for_status()
     metadata = json.loads(r.content.decode("utf-8"))
     return metadata
 
