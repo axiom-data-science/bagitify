@@ -156,12 +156,19 @@ def prep_bagit_metadata(tabledap_url: str, config_metadata: dict) -> dict:
     return bagit_metadata
 
 
-def gen_archive(bag_directory: Path, bagit_metadata: dict):
-    bag = bagit.make_bag(
-        bag_directory, bag_info=bagit_metadata, checksums=["sha256"])
+def bag_it_up(bag_directory: Path, bagit_metadata: dict, create: bool = True):
+    """Create or update a BagIt archive."""
+    if create:
+        bagit.make_bag(bag_directory, bag_info=bagit_metadata, checksums=["sha256"])
+        return  # new bag created, done
 
+    # Open the existing bag
+    bag = bagit.Bag(str(bag_directory))
+    # Update bag-info
+    bag.info.update(bagit_metadata)
+    # Any potentially new files have already been written to the `data` payload directory,
+    # so just persist any metadata changes made and update manifests with checksums
     bag.save(manifests=True)
-    # should determine if this is needed here.
 
 
 def config_metadata_from_env() -> dict:
@@ -214,13 +221,20 @@ def run(
     if not bag_directory:
         bag_directory = Path.cwd() / "bagit_archives" / get_dataset_name_from_tabledap_url(tabledap_url)
 
+    # make sure the bag directory exists
     bag_directory.mkdir(parents=True, exist_ok=True)
+    # check if bag already exists
+    bag_exists = bag_directory.joinpath("bagit.txt").is_file()
+    # set destination for netCDF file downloads
+    data_destination = bag_directory.joinpath("data") if bag_exists else bag_directory
 
-    download_netcdf_range(tabledap_url, bag_start_datetime, bag_end_datetime, bag_directory)
+    download_netcdf_range(tabledap_url, bag_start_datetime, bag_end_datetime, data_destination)
 
     config_metadata = config_metadata_from_env()
     bagit_metadata = prep_bagit_metadata(tabledap_url, config_metadata)
-    gen_archive(bag_directory, bagit_metadata)
+
+    # update or create the bagit archive
+    bag_it_up(bag_directory, bagit_metadata, create=not bag_exists)
 
 
 @click.command()
