@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""Generate NCEI bagit archives from an ERDDAP tabledap dataset.
+
+For more information on the bagit standard, see: https://en.wikipedia.org/wiki/BagIt
+"""
 
 import bagit
 import click
@@ -9,28 +13,32 @@ import re
 import requests
 
 from pathlib import Path
+from typing import Optional
 
 dt_format = "%Y-%m-%dT%H:%M:%SZ"
+DatetimeT = datetime.datetime
 
 
-def get_start_end(tabledap_url: str) -> (datetime, datetime):
+def get_start_end(tabledap_url: str) -> tuple[DatetimeT, DatetimeT]:
     start_end_url = f'{tabledap_url}.csv0?time&orderByMinMax(%22time%22)'
     r = requests.get(start_end_url, allow_redirects=True)
     r.raise_for_status()
-    processed = [parse_datetime(dt_str) for dt_str in r.content.decode(
-        "utf-8").strip().split("\n")]
+    processed = [
+        parse_datetime(dt_str)
+        for dt_str in r.content.decode("utf-8").strip().split("\n")
+    ]
     start = processed[0]
     end = processed[1]
     return (start, end)
 
 
-def round_to_start_of_month(start_datetime: datetime) -> datetime:
+def round_to_start_of_month(start_datetime: DatetimeT) -> DatetimeT:
     month_start = datetime.datetime(
         day=1, month=start_datetime.month, year=start_datetime.year)
     return month_start
 
 
-def round_to_next_month(end_datetime: datetime) -> datetime:
+def round_to_next_month(end_datetime: DatetimeT) -> DatetimeT:
     if end_datetime.month < 12:
         next_month_start = datetime.datetime(
             day=1, month=end_datetime.month + 1, year=end_datetime.year)
@@ -40,25 +48,21 @@ def round_to_next_month(end_datetime: datetime) -> datetime:
     return next_month_start
 
 
-def format_datetime(datetime: datetime) -> str:
+def format_datetime(datetime: DatetimeT) -> str:
     return datetime.strftime(dt_format)
 
 
-def parse_datetime(dt_str: str) -> datetime:
+def parse_datetime(dt_str: str) -> DatetimeT:
     return datetime.datetime.strptime(dt_str, dt_format)
 
 
-def get_month_netcdf(tabledap_url: str, start_datetime: datetime, bag_directory: Path, verbose: bool = True):
+def download_month_netcdf(tabledap_url: str, start_datetime: DatetimeT, destination_dir: Path, verbose: bool = True):
+    """Download netCDF file for the month starting with the provided datetime."""
     end_datetime = round_to_next_month(start_datetime)
 
-    month_nc_url = (
-        f"{tabledap_url}.ncCFMA?&time>="
-        + format_datetime(start_datetime)
-        + "&time<"
-        + format_datetime(end_datetime)
-    )
+    month_nc_url = f"{tabledap_url}.ncCFMA?&time>={format_datetime(start_datetime)}&time<{format_datetime(end_datetime)}"
     nc_filename = gen_nc_filename(tabledap_url, start_datetime)
-    nc_path = os.path.join(bag_directory, nc_filename)
+    nc_path = os.path.join(destination_dir, nc_filename)
     if verbose:
         print(
             f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
@@ -74,7 +78,7 @@ def get_month_netcdf(tabledap_url: str, start_datetime: datetime, bag_directory:
         fp.write(r.content)
 
 
-def get_start_dates_for_date_range(start_datetime: datetime, end_datetime: datetime) -> list[datetime]:
+def get_start_dates_for_date_range(start_datetime: DatetimeT, end_datetime: DatetimeT) -> list[DatetimeT]:
     month_start_dates = []
     current_start = round_to_start_of_month(start_datetime)
     if end_datetime != round_to_start_of_month(end_datetime):
@@ -88,12 +92,19 @@ def get_start_dates_for_date_range(start_datetime: datetime, end_datetime: datet
     return month_start_dates
 
 
-def get_range_netcdf(tabledap_url: str, start_datetime: datetime, end_datetime: datetime, bag_directory: Path, verbose: bool = True):
+def download_netcdf_range(
+    tabledap_url: str,
+    start_datetime: DatetimeT,
+    end_datetime: DatetimeT,
+    destination_dir: Path,
+    verbose: bool = True,
+):
+    """Download netCDF files for each month in the provided time range."""
     for month_start_datetime in get_start_dates_for_date_range(start_datetime, end_datetime):
-        get_month_netcdf(tabledap_url, month_start_datetime, bag_directory, verbose=verbose)
+        download_month_netcdf(tabledap_url, month_start_datetime, destination_dir, verbose=verbose)
 
 
-def gen_nc_filename(tabledap_url: str, start_datetime: datetime) -> str:
+def gen_nc_filename(tabledap_url: str, start_datetime: DatetimeT) -> str:
     name_parts = [get_dataset_name_from_tabledap_url(tabledap_url)]
     name_parts.append(start_datetime.strftime("%Y-%m") + ".nc")
     name = "_".join(name_parts)
@@ -179,7 +190,12 @@ def config_metadata_from_env() -> dict:
     return config_metadata
 
 
-def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: datetime = None, requested_end_datetime: datetime = None):
+def run(
+    tabledap_url: str,
+    bag_directory: Optional[Path],
+    requested_start_datetime: Optional[DatetimeT] = None,
+    requested_end_datetime: Optional[DatetimeT] = None,
+):
     # clean up tabledap url
     tabledap_url = tabledap_url.lower()
     # remove .html suffix if present
@@ -191,8 +207,8 @@ def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: dateti
     print(f'Dataset has time range {format_datetime(data_start_datetime)} - {format_datetime(data_end_datetime)}')
 
     # adjust start and end time if sane arguments were provided
-    bag_start_datetime = max((d for d in [requested_start_datetime, data_start_datetime] if d), default=None)
-    bag_end_datetime = min((d for d in [requested_end_datetime, data_end_datetime] if d), default=None)
+    bag_start_datetime = max((d for d in [requested_start_datetime, data_start_datetime] if d))
+    bag_end_datetime = min((d for d in [requested_end_datetime, data_end_datetime] if d))
 
     # use default bag directory based on dataset name if not provided
     if not bag_directory:
@@ -200,7 +216,7 @@ def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: dateti
 
     bag_directory.mkdir(parents=True, exist_ok=True)
 
-    get_range_netcdf(tabledap_url, bag_start_datetime, bag_end_datetime, bag_directory)
+    download_netcdf_range(tabledap_url, bag_start_datetime, bag_end_datetime, bag_directory)
 
     config_metadata = config_metadata_from_env()
     bagit_metadata = prep_bagit_metadata(tabledap_url, config_metadata)
@@ -214,8 +230,8 @@ def run(tabledap_url: str, bag_directory: Path, requested_start_datetime: dateti
 @click.argument('tabledap_url')
 def cli(
   bag_directory: Path,
-  start_date: datetime,
-  end_date: datetime,
+  start_date: DatetimeT,
+  end_date: DatetimeT,
   tabledap_url: str,
 ):
     """Generate NCEI bagit archives from an ERDDAP tabledap dataset at TABLEDAP_URL."""
