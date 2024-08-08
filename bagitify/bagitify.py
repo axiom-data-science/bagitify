@@ -63,16 +63,20 @@ def download_month_netcdf(tabledap_url: str, start_datetime: DatetimeT, destinat
     month_nc_url = f"{tabledap_url}.ncCFMA?&time>={format_datetime(start_datetime)}&time<{format_datetime(end_datetime)}"
     nc_filename = gen_nc_filename(tabledap_url, start_datetime)
     nc_path = os.path.join(destination_dir, nc_filename)
+
+    if Path(nc_path).is_file():
+        if verbose:
+            print(f"Skipping download. File '{nc_path}' already exists.")
+        return
+
     if verbose:
-        print(
-            f'Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to {nc_path} ...')
+        print(f"Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to '{nc_path}'.")
     r = requests.get(month_nc_url, allow_redirects=True)
     # dataset may contain data gaps one month or greater between start and end times
     if r.status_code == 404 and 'Your query produced no matching results' in str(r.content):
         print(f'No data found for month {format_datetime(start_datetime)}.')
         return
-    else:
-        r.raise_for_status()
+    r.raise_for_status()
 
     with open(nc_path, "wb") as fp:
         fp.write(r.content)
