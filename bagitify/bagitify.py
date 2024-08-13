@@ -15,6 +15,7 @@ import requests
 from pathlib import Path
 from typing import Optional
 
+click_datetime_formats = ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ']
 dt_format = "%Y-%m-%dT%H:%M:%SZ"
 DatetimeT = datetime.datetime
 
@@ -243,8 +244,8 @@ def run(
 
 @click.command()
 @click.option('-d', '--bag-directory', type=click.Path(writable=True, file_okay=False, path_type=Path))
-@click.option('-s', '--start-date', type=click.DateTime(), default=None)
-@click.option('-e', '--end-date', type=click.DateTime(), default=None)
+@click.option('-s', '--start-date', type=click.DateTime(click_datetime_formats), default=None)
+@click.option('-e', '--end-date', type=click.DateTime(click_datetime_formats), default=None)
 @click.argument('tabledap_url')
 def cli(
   bag_directory: Path,
