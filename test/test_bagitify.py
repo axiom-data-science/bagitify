@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 import json
 import os
 import shutil
@@ -52,7 +53,7 @@ def test_archive_creation(tmp_path):
     with open(testing_metadata, "r") as fp:
         bagit_metadata = json.load(fp)
 
-    bagitify.gen_archive(tmp_bag_dir, bagit_metadata)
+    bagitify.bag_it_up(Path(tmp_bag_dir), bagit_metadata)
 
     assert os.path.exists(os.path.join(tmp_bag_dir, "data", "edu_usf_marine_comps_2022-07.nc"))
 
