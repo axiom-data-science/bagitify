@@ -29,7 +29,7 @@ two phone numbers being saved in the bagit metadata.
 To actually call the program, run
 
 ```bash
-./bagitify/bagitify.py [-d DIRECTORY] [-s START] [-e END] <tabledap_url>`
+./bagitify/bagitify.py [-d DIRECTORY] [-s START] [-e END] [-v] [-f] <tabledap_url>`
 ```
 
 `-d` allows the user to specify the directory to create the bagit archive in. If not set,
@@ -41,6 +41,10 @@ For example, `2022-05-01` and `2022-05-01T00:00:00Z` are valid. If a start or en
 the start or end of the data in ERDDAP, repsectively. In any case, it will be internally
 rounded to the first day of the month for the start, and the first day of the next month for the end.
 
+`-v` activates verbose mode, where additional information on operations is printed.
+
+`-f` activates force mode, where existing files are deleted and redownloaded.
+
 Finally, `tabledap_url` is an ERDDAP tabledap url such as `https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html`
 
 Putting it all together, bagitify might be run like so:
@@ -49,9 +53,15 @@ Putting it all together, bagitify might be run like so:
 python bagitify/bagitify.py -s 2022-05-01 -e 2022-08-01 https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html
 ```
 
+By default, monthly netCDF files which have already been downloaded are skipped/not redownloaded, __unless__ the
+end of the month is after the modification date of the local file. This behavior ensures that the netCDF file for
+the current month gets updated as new data is collected.
+
+To force existing files to be deleted and redownloaded, set the `-f` or `--force` argument.
+
 ### Docker
 
-The docker version works essentially the same way, though the variables will need to be set through the docker command,
+The Docker version works essentially the same way, though the variables will need to be set through the docker command,
 and it will be important to bind mount the place it will be writing to so that you can get the results. For example: 
 
 ```
@@ -65,7 +75,7 @@ docker run \
   -e BAGIT_ORGANIZATION_ADDRESS="123 Fake Street, Some Town, AK 12345" \
   -e BAGIT_SOURCE_ORGANIZATION="Fake Org" \
   -v ./ncei-archives:/srv/bagitify/bagit_archives \
-  bagitify -s 2022-05-01 -e 2022-08-01 https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html
+  bagitify -s 2022-05-01 -e 2022-08-01 -v https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html
 ```
 
 An example Docker Compose file is also provided in this repository at `docker-compose.yml`.

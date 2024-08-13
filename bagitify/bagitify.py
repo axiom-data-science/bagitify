@@ -57,7 +57,7 @@ def parse_datetime(dt_str: str) -> DatetimeT:
     return datetime.datetime.strptime(dt_str, dt_format)
 
 
-def download_month_netcdf(tabledap_url: str, start_datetime: DatetimeT, destination_dir: Path, verbose: bool = True):
+def download_month_netcdf(tabledap_url: str, start_datetime: DatetimeT, destination_dir: Path, verbose: bool = False, force: bool = False):
     """Download netCDF file for the month starting with the provided datetime."""
     end_datetime = round_to_next_month(start_datetime)
 
@@ -66,19 +66,25 @@ def download_month_netcdf(tabledap_url: str, start_datetime: DatetimeT, destinat
     nc_path = destination_dir / nc_filename
 
     if nc_path.is_file():
-        nc_path_mtime = DatetimeT.fromtimestamp(nc_path.stat().st_mtime)
-        if nc_path_mtime < end_datetime:
-            # The file was written before the end date time for this monthly chunk's range,
-            # therefore cannot contain the whole month of up to date data - unless somebody predicted the future :)
-            print(f"File '{nc_path}' exists but was written before chunk ending {end_datetime}, downloading.")
-        else:
+        if force:
             if verbose:
-                print(f"Skipping download. File '{nc_path}' already exists.")
-            return
+                print(f"File '{nc_path}' exists but downloads are forced. Deleting existing file and re-downloading.")
+            nc_path.unlink()
+        else:
+            nc_path_mtime = DatetimeT.fromtimestamp(nc_path.stat().st_mtime)
+            if nc_path_mtime < end_datetime:
+                # The file was written before the end date time for this monthly chunk's range,
+                # therefore cannot contain the whole month of up to date data - unless somebody predicted the future :)
+                if verbose:
+                    print(f"File '{nc_path}' exists but was written before chunk ending {end_datetime}, re-downloading.")
+            else:
+                if verbose:
+                    print(f"Skipping download. File '{nc_path}' already exists.")
+                return
 
     elif verbose:
         print(f"Downloading nc for {format_datetime(start_datetime)} - {format_datetime(end_datetime)} to '{nc_path}'.")
-    
+
     r = requests.get(month_nc_url, allow_redirects=True)
     # dataset may contain data gaps one month or greater between start and end times
     if r.status_code == 404 and 'Your query produced no matching results' in str(r.content):
@@ -109,11 +115,12 @@ def download_netcdf_range(
     start_datetime: DatetimeT,
     end_datetime: DatetimeT,
     destination_dir: Path,
-    verbose: bool = True,
+    verbose: bool = False,
+    force: bool = False,
 ):
     """Download netCDF files for each month in the provided time range."""
     for month_start_datetime in get_start_dates_for_date_range(start_datetime, end_datetime):
-        download_month_netcdf(tabledap_url, month_start_datetime, destination_dir, verbose=verbose)
+        download_month_netcdf(tabledap_url, month_start_datetime, destination_dir, verbose=verbose, force=force)
 
 
 def gen_nc_filename(tabledap_url: str, start_datetime: DatetimeT) -> str:
@@ -214,6 +221,8 @@ def run(
     bag_directory: Optional[Path],
     requested_start_datetime: Optional[DatetimeT] = None,
     requested_end_datetime: Optional[DatetimeT] = None,
+    verbose: bool = False,
+    force: bool = False,
 ):
     # clean up tabledap url
     tabledap_url = tabledap_url.lower()
@@ -240,7 +249,7 @@ def run(
     # set destination for netCDF file downloads
     data_destination = bag_directory.joinpath("data") if bag_exists else bag_directory
 
-    download_netcdf_range(tabledap_url, bag_start_datetime, bag_end_datetime, data_destination)
+    download_netcdf_range(tabledap_url, bag_start_datetime, bag_end_datetime, data_destination, verbose, force)
 
     config_metadata = config_metadata_from_env()
     bagit_metadata = prep_bagit_metadata(tabledap_url, config_metadata)
@@ -253,15 +262,19 @@ def run(
 @click.option('-d', '--bag-directory', type=click.Path(writable=True, file_okay=False, path_type=Path))
 @click.option('-s', '--start-date', type=click.DateTime(click_datetime_formats), default=None)
 @click.option('-e', '--end-date', type=click.DateTime(click_datetime_formats), default=None)
+@click.option('-v', '--verbose/--no-verbose', default=False)
+@click.option('-f', '--force/--no-force', default=False)
 @click.argument('tabledap_url')
 def cli(
   bag_directory: Path,
   start_date: DatetimeT,
   end_date: DatetimeT,
+  verbose: bool,
+  force: bool,
   tabledap_url: str,
 ):
     """Generate NCEI bagit archives from an ERDDAP tabledap dataset at TABLEDAP_URL."""
-    run(tabledap_url, bag_directory, start_date, end_date)
+    run(tabledap_url, bag_directory, start_date, end_date, verbose, force)
 
 
 if __name__ == "__main__":
