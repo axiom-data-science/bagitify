@@ -8,6 +8,3 @@ dependencies:
  - pytest=7.4.2
  - requests=2.31.0
  - python=3.12
- - pip
- - pip:
-   - -e .

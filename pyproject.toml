@@ -21,3 +21,6 @@ exclude = ["bagit_archives"]
 [build-system]
 requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
+
+[project.scripts]
+bagitify = "bagitify.cli:cli"

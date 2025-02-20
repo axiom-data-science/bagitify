@@ -29,7 +29,7 @@ two phone numbers being saved in the bagit metadata.
 To actually call the program, run
 
 ```bash
-./bagitify/bagitify.py [-d DIRECTORY] [-s START] [-e END] [-v] [-f] <tabledap_url>`
+bagitify [-d DIRECTORY] [-s START] [-e END] [-v] [-f] <tabledap_url>`
 ```
 
 `-d` allows the user to specify the directory to create the bagit archive in. If not set,
@@ -50,7 +50,7 @@ Finally, `tabledap_url` is an ERDDAP tabledap url such as `https://erddap.secoor
 Putting it all together, bagitify might be run like so:
 
 ```bash
-python bagitify/bagitify.py -s 2022-05-01 -e 2022-08-01 https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html
+bagitify -s 2022-05-01 -e 2022-08-01 https://erddap.secoora.org/erddap/tabledap/edu_usf_marine_comps_1407d550.html
 ```
 
 By default, monthly netCDF files which have already been downloaded are skipped/not redownloaded, __unless__ the
@@ -91,7 +91,24 @@ BAGITIFY_USER=$(id -u) docker compose run bagitify
 
 Environment variables can also be managed using `--env-file` in `docker run`.
 
-### Contributing
+## Installation
+
+1. Install dependencties into a new conda environment:
+    ```
+    conda env create -f environment.yml
+    ```
+2. Then activate the environment:
+    ```
+    conda activate bagitify
+    ```
+3. And install the executable if you wish:
+    ```
+    pip install .
+    ```
+    - alternatively, to run the program you can just execute the module `python -m bagitify.cli`
+    - if you install with `pip` you should be able to run `bagitify`
+
+## Contributing
 
 Contributions via pull request are welcome. Please add tests for any new features and fix any
 formatting issues identified by `flake8` prior to submitting.

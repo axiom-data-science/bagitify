@@ -3,3 +3,4 @@ ncei-archives
 *.pyc
 .envrc
 *.egg-info
+build/
