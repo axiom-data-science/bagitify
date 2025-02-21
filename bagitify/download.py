@@ -171,7 +171,11 @@ def download_data_for_bag(
     *Download netCDF files to a temporary directory, then move it to the bag directory.
     If updating an existing bag without the force flag, files will be moved one by one.
     """
-    with tempfile.TemporaryDirectory(prefix="bagitify-data-", dir=tmp_parent) as tmpdir:
+    dataset_name = get_dataset_name_from_tabledap_url(tabledap_url)
+    with tempfile.TemporaryDirectory(prefix=f"{dataset_name}-", dir=tmp_parent) as tmpdir:
+        if verbose:
+            print(f"Using bag directory '{bag_directory}'")
+            print(f"Using temp directory '{tmpdir}'")
         # 1. Download necessary files to a tmp dir
         tmp_destination = Path(tmpdir)
         download_netcdf_range(
