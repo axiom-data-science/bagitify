@@ -152,7 +152,10 @@ def move_tmp_to_bag(
         if verbose:
             print(f"Cleared existing files in '{bag_data_dir}'")
     # move/rename tmp dir to the destination dir (either `bag` or `bag/data`)
-    os.rename(tmp_destination, bag_data_dir if bag_exists else bag_directory)
+    dest_dir = bag_data_dir if bag_exists else bag_directory
+    os.rename(tmp_destination, dest_dir)
+    # temp directories are only accessible by the creating user, so make accessible
+    os.chmod(dest_dir, 0o755)
     if verbose:
         print(f"Moved '{tmp_destination}' to '{bag_data_dir}'")
 
