@@ -108,6 +108,15 @@ Environment variables can also be managed using `--env-file` in `docker run`.
     - alternatively, to run the program you can just execute the module `python -m bagitify.cli`
     - if you install with `pip` you should be able to run `bagitify`
 
+## Testing
+
+With the project installed and environment active, run
+```
+python -m pytest
+```
+
+This will collect and run all tests in the `test/` dir like `pytest` does.
+
 ## Contributing
 
 Contributions via pull request are welcome. Please add tests for any new features and fix any

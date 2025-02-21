@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Optional
 import click
 
-from bagitify.bagitify import Datetime, run
+from bagitify.bagitify import run
+from bagitify.utils import Datetime
 
 CLICK_DATETIME_FORMATS = ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ']
 

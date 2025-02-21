@@ -4,7 +4,8 @@ import json
 import os
 import shutil
 
-from bagitify import bagitify
+from bagitify.bagit_wrapper import bag_it_up
+from bagitify.download import get_start_dates_for_date_range
 
 test_data_dir = os.path.join(os.path.dirname(__file__), "test-data")
 testing_netcdf = os.path.join(test_data_dir, "netcdf")
@@ -12,7 +13,7 @@ testing_metadata = os.path.join(test_data_dir, "metadata.json")
 
 
 def test_get_start_dates_for_date_range():
-    assert bagitify.get_start_dates_for_date_range(
+    assert get_start_dates_for_date_range(
         start_datetime=datetime(2023, 3, 22),
         end_datetime=datetime(2023, 6, 19),
     ) == [
@@ -22,7 +23,7 @@ def test_get_start_dates_for_date_range():
         datetime(2023, 6, 1),
     ]
 
-    assert bagitify.get_start_dates_for_date_range(
+    assert get_start_dates_for_date_range(
         start_datetime=datetime(2023, 11, 1),
         end_datetime=datetime(2024, 4, 1),
     ) == [
@@ -33,7 +34,7 @@ def test_get_start_dates_for_date_range():
         datetime(2024, 3, 1),
     ]
 
-    assert bagitify.get_start_dates_for_date_range(
+    assert get_start_dates_for_date_range(
         start_datetime=datetime(2023, 11, 1),
         end_datetime=datetime(2024, 4, 2),
     ) == [
@@ -53,7 +54,7 @@ def test_archive_creation(tmp_path):
     with open(testing_metadata, "r") as fp:
         bagit_metadata = json.load(fp)
 
-    bagitify.bag_it_up(Path(tmp_bag_dir), bagit_metadata)
+    bag_it_up(Path(tmp_bag_dir), bagit_metadata)
 
     assert os.path.exists(os.path.join(tmp_bag_dir, "data", "edu_usf_marine_comps_2022-07.nc"))
 
