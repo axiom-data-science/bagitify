@@ -6,7 +6,7 @@ For more information on the bagit standard, see: https://en.wikipedia.org/wiki/B
 import requests
 
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from bagitify.bagit_wrapper import bag_it_up, is_bag
 from bagitify.download import download_data_for_bag
@@ -43,9 +43,12 @@ def run(
     tmp_parent: Optional[Path] = None,
     verbose: bool = False,
     force: bool = False,
+    postprocess_bag_data: Optional[Callable[[Path], None]] = None,
 ):
     """Generate a bagit archive from an ERDDAP tabledap dataset.
 
+    Optionally, provide a ``postprocess_bag_data`` function that will be executed
+    after data is downloaded from ERDDAP and before it gets bagged.
     Note: If `force` is `False` any existing files that are not in erddap will remain.
     """
     # use default bag directory based on dataset name if not provided
@@ -90,6 +93,9 @@ def run(
         verbose=verbose,
         force=force,
     )
+
+    if postprocess_bag_data:
+        postprocess_bag_data(bag_directory)
 
     bagit_metadata = prep_bagit_metadata(tabledap_url)
 
