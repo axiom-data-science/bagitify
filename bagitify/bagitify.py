@@ -94,10 +94,13 @@ def run(
         force=force,
     )
 
+    bag_exists = is_bag(bag_directory)
+
     if postprocess_bag_data:
-        postprocess_bag_data(bag_directory)
+        dir_with_data = bag_directory / "data" if bag_exists else bag_directory
+        postprocess_bag_data(dir_with_data)
 
     bagit_metadata = prep_bagit_metadata(tabledap_url)
 
     # update or create the bagit archive
-    bag_it_up(bag_directory, bagit_metadata, create=not is_bag(bag_directory))
+    bag_it_up(bag_directory, bagit_metadata, create=not bag_exists)
