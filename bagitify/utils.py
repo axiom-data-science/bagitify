@@ -28,10 +28,6 @@ def parse_datetime(dt_str: str) -> Datetime:
     return Datetime.strptime(dt_str, DT_FORMAT)
 
 
-def get_dataset_name_from_tabledap_url(tabledap_url: str) -> str:
-    return tabledap_url.split("/")[-1]
-
-
 def round_to_start_of_month(start_datetime: Datetime) -> Datetime:
     month_start = Datetime(
         day=1, month=start_datetime.month, year=start_datetime.year)
