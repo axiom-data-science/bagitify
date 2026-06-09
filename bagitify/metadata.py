@@ -88,9 +88,9 @@ def get_naming_authority_and_id(tabledap_url: str) -> tuple[str, str]:
 
     path_regex = re.compile("[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9._-]+")
 
-    if not path_regex.fullmatch(naming_authority):
+    if naming_authority in {".", ".."} or not path_regex.fullmatch(naming_authority):
         raise ValueError(f"naming_authority {naming_authority} contains disallowed characters")
-    if not path_regex.fullmatch(dataset_id):
+    if dataset_id in {".", ".."} or not path_regex.fullmatch(dataset_id):
         raise ValueError(f"dataset id {dataset_id} contains disallowed characters")
 
     return naming_authority, dataset_id
