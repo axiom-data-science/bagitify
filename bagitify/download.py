@@ -7,17 +7,17 @@ from typing import Optional
 
 import requests
 from bagitify.bagit_wrapper import is_bag
+from bagitify.metadata import get_dataset_name
 from bagitify.utils import (
     Datetime,
     format_datetime,
-    get_dataset_name_from_tabledap_url,
     round_to_next_month,
     round_to_start_of_month,
 )
 
 
 def gen_nc_filename(tabledap_url: str, start_datetime: Datetime) -> str:
-    name_parts = [get_dataset_name_from_tabledap_url(tabledap_url)]
+    name_parts = [get_dataset_name(tabledap_url)]
     name_parts.append(start_datetime.strftime("%Y-%m") + ".nc")
     name = "_".join(name_parts)
     return name
@@ -174,7 +174,7 @@ def download_data_for_bag(
     *Download netCDF files to a temporary directory, then move it to the bag directory.
     If updating an existing bag without the force flag, files will be moved one by one.
     """
-    dataset_name = get_dataset_name_from_tabledap_url(tabledap_url)
+    dataset_name = get_dataset_name(tabledap_url)
     with tempfile.TemporaryDirectory(prefix=f"{dataset_name}-", dir=tmp_parent) as tmpdir:
         if verbose:
             print(f"Using bag directory '{bag_directory}'")

@@ -5,6 +5,8 @@ import os
 import re
 import requests
 
+from functools import lru_cache
+
 
 def config_metadata_from_env() -> dict:
     """Get metadata from environment variables."""
@@ -33,15 +35,13 @@ def config_metadata_from_env() -> dict:
     return config_metadata
 
 
+@lru_cache(maxsize=100)
 def get_metadata(tabledap_url: str) -> dict:
     metadata_url = tabledap_url.replace("/tabledap/", "/info/") + "/index.json"
     r = requests.get(metadata_url, allow_redirects=True)
     r.raise_for_status()
-    metadata = json.loads(r.content.decode("utf-8"))
-    return metadata
+    tabledap_metadata = json.loads(r.content.decode("utf-8"))
 
-
-def parse_tabledap_metadata(tabledap_metadata: dict) -> dict:
     rows = tabledap_metadata["table"]["rows"]
     nested = {}
     for row in rows:
@@ -63,7 +63,7 @@ def parse_tabledap_metadata(tabledap_metadata: dict) -> dict:
 
 
 def prep_bagit_metadata(tabledap_url: str) -> dict:
-    tabledap_metadata = parse_tabledap_metadata(get_metadata(tabledap_url))
+    tabledap_metadata = get_metadata(tabledap_url)
     bagit_metadata = config_metadata_from_env()
     bagit_metadata["External-Description"] = (
       f'Sensor data from station {"".join(tabledap_url.split("/")[-1].split(".")[0:-1])}'
@@ -72,3 +72,29 @@ def prep_bagit_metadata(tabledap_url: str) -> dict:
     bagit_metadata["External-Identifier"] = title
 
     return bagit_metadata
+
+
+def get_naming_authority_and_id(tabledap_url: str) -> tuple[str, str]:
+    tabledap_metadata = get_metadata(tabledap_url)
+    try:
+        naming_authority = tabledap_metadata["attribute"]["NC_GLOBAL"]["naming_authority"]["data_value"]
+    except KeyError:
+        raise ValueError(f"naming_authority not found for {tabledap_url}")
+
+    try:
+        dataset_id = tabledap_metadata["attribute"]["NC_GLOBAL"]["id"]["data_value"]
+    except KeyError:
+        raise ValueError(f"id not found for {tabledap_url}")
+
+    path_regex = re.compile("[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9._-]+")
+
+    if naming_authority in {".", ".."} or not path_regex.fullmatch(naming_authority):
+        raise ValueError(f"naming_authority {naming_authority} contains disallowed characters")
+    if dataset_id in {".", ".."} or not path_regex.fullmatch(dataset_id):
+        raise ValueError(f"dataset id {dataset_id} contains disallowed characters")
+
+    return naming_authority, dataset_id
+
+
+def get_dataset_name(tabledap_url: str) -> str:
+    return '.'.join(get_naming_authority_and_id(tabledap_url))
